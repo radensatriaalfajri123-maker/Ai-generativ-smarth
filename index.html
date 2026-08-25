@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI SMARTH GENERATIV</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif; }
+        body { background-color: #0f172a; color: #f8fafc; display: flex; flex-direction: column; height: 100vh; }
+        header { text-align: center; padding: 15px; background: #1e293b; border-bottom: 1px solid #334155; }
+        
+        .rainbow-text {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(90deg, #ff007f, #7928ca, #4299e1, #00f2fe, #4facfe, #ff007f);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: rainbow 4s ease infinite;
+        }
+
+        @keyframes rainbow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .chat-container { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px; }
+        .message { max-width: 80%; padding: 10px 14px; border-radius: 16px; font-size: 0.95rem; word-wrap: break-word; }
+        .user-message { align-self: flex-end; background: #2563eb; color: #fff; }
+        .ai-message { align-self: flex-start; background: #1e293b; border: 1px solid #334155; }
+        
+        .status-indicator {
+            align-self: flex-start; font-size: 0.85rem; font-style: italic; color: #38bdf8;
+            display: flex; align-items: center; gap: 8px; background: rgba(56, 189, 248, 0.1);
+            padding: 6px 12px; border-radius: 20px;
+        }
+        .dot-pulse { width: 6px; height: 6px; background-color: #38bdf8; border-radius: 50%; animation: pulse 0.8s infinite alternate; }
+        @keyframes pulse { 0% { opacity: 0.2; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1.2); } }
+
+        .input-container { padding: 10px 15px; background: #1e293b; display: flex; gap: 8px; border-top: 1px solid #334155; }
+        .input-container input[type="text"] { flex: 1; padding: 10px 14px; background: #0f172a; border: 1px solid #334155; border-radius: 20px; color: #fff; outline: none; }
+        .btn-icon { background: #334155; border: none; color: #fff; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; }
+
+        /* MODAL POPUP LIMIT IS UP */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.8); display: none; justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal-card {
+            background: #1e293b; border: 1px solid #ef4444; border-radius: 16px; padding: 25px;
+            width: 90%; max-width: 360px; text-align: center; box-shadow: 0 10px 25px rgba(239, 68, 68, 0.2);
+        }
+        .modal-card h2 { color: #ef4444; margin-bottom: 10px; font-size: 1.4rem; }
+        .modal-card p { font-size: 0.9rem; color: #cbd5e1; margin-bottom: 15px; }
+        .price-buttons { display: flex; gap: 8px; justify-content: center; margin-bottom: 15px; }
+        .btn-price {
+            background: #2563eb; color: #fff; border: none; padding: 8px 14px; border-radius: 8px;
+            font-weight: bold; cursor: pointer; transition: background 0.2s;
+        }
+        .btn-price:hover { background: #1d4ed8; }
+        .btn-wait {
+            background: transparent; color: #38bdf8; border: 1px solid #38bdf8;
+            padding: 8px 14px; border-radius: 8px; width: 100%; cursor: pointer; font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 class="rainbow-text">AI SMARTH GENERATIV</h1>
+    </header>
+
+    <div class="chat-container" id="chatBox">
+        <div class="message ai-message">Hello! Send a text message or photo. I can speak and understand all languages.</div>
+    </div>
+
+    <div class="input-container">
+        <input type="file" id="imageInput" accept="image/*" style="display: none;" onchange="handleImageSelect(event)">
+        <button class="btn-icon" onclick="document.getElementById('imageInput').click()">📷</button>
+        <input type="text" id="userInput" placeholder="Type a message..." onkeydown="if(event.key === 'Enter') sendMessage()">
+        <button class="btn-icon" style="background:#2563eb;" onclick="sendMessage()">➔</button>
+    </div>
+
+    <!-- UI MODAL LIMIT IS UP -->
+    <div class="modal-overlay" id="limitModal">
+        <div class="modal-card">
+            <h2>⚠️ Limit is up</h2>
+            <p>Daily API quota has been reached on all keys.</p>
+            
+            <p style="font-weight: bold; margin-bottom: 8px;">Instant Quota Top-Up:</p>
+            <div class="price-buttons">
+                <button class="btn-price" onclick="payQuota('1 Dollar')">$1</button>
+                <button class="btn-price" onclick="payQuota('2 Dollars')">$2</button>
+                <button class="btn-price" onclick="payQuota('3 Dollars')">$3</button>
+            </div>
+
+            <p style="font-size: 0.8rem; margin: 10px 0;">or</p>
+            <button class="btn-wait" onclick="waitOneDay()">Wait 1 Day (Get Notification)</button>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+        const chatBox = document.getElementById('chatBox');
+        const userInput = document.getElementById('userInput');
+        const limitModal = document.getElementById('limitModal');
+
+        if ("Notification" in window) {
+            Notification.requestPermission();
+        }
+
+        function handleImageSelect(event) {
+            selectedFile = event.target.files[0];
+        }
+
+        async function sendMessage() {
+            const text = userInput.value.trim();
+            if (!text && !selectedFile) return;
+
+            let userHTML = text;
+            if (selectedFile) userHTML += `<br><small>🖼️ [Image Attached]</small>`;
+            appendMessage(userHTML, 'user-message');
+
+            const formData = new FormData();
+            if (text) formData.append('prompt', text);
+            if (selectedFile) formData.append('image', selectedFile);
+
+            // Menampilkan status bahasa Inggris
+            const statusText = selectedFile ? "Analyzing image..." : "Thinking...";
+            const statusNode = showStatus(statusText);
+
+            userInput.value = '';
+            selectedFile = null;
+
+            try {
+                const response = await fetch('/api/chat', { method: 'POST', body: formData });
+                const data = await response.json();
+                statusNode.remove();
+
+                if (response.status === 429 || data.error_type === 'LIMIT_EXCEEDED') {
+                    showLimitModal();
+                } else if (data.response) {
+                    appendMessage(data.response, 'ai-message');
+                } else {
+                    appendMessage("Error: " + (data.error || "Failed to process request."), 'ai-message');
+                }
+            } catch (err) {
+                statusNode.remove();
+                appendMessage("Connection error.", 'ai-message');
+            }
+        }
+
+        function showLimitModal() {
+            limitModal.style.display = 'flex';
+        }
+
+        function payQuota(amount) {
+            alert(`You selected ${amount} top-up. Payment simulated successfully!`);
+            limitModal.style.display = 'none';
+        }
+
+        function waitOneDay() {
+            limitModal.style.display = 'none';
+
+            // Notifikasi sistem langsung muncul detik itu juga
+            if ("Notification" in window && Notification.permission === "granted") {
+                new Notification("AI SMARTH GENERATIV", {
+                    body: "Notice: Limit reached. Your 1-day waiting timer has started right now!",
+                    icon: "https://cdn-icons-png.flaticon.com/512/4712/4712076.png"
+                });
+            } else {
+                alert("Notice: Limit reached. Your 1-day waiting timer has started right now!");
+            }
+
+            appendMessage("⏱️ <i>You chose to wait 1 day. System notification activated and your quota timer is running.</i>", 'ai-message');
+        }
+
+        function appendMessage(text, className) {
+            const div = document.createElement('div');
+            div.className = `message ${className}`;
+            div.innerHTML = text.replace(/\n/g, '<br>');
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function showStatus(text) {
+            const div = document.createElement('div');
+            div.className = 'status-indicator';
+            div.innerHTML = `<div class="dot-pulse"></div> <span>${text}</span>`;
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            return div;
+        }
+    </script>
+</body>
+</html>
+
