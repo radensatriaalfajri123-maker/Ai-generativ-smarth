@@ -1,0 +1,11 @@
+# Menyembunyikan file API Key rahasia
+.env
+
+# Menyembunyikan file cache Python
+__pycache__/
+*.pyc
+
+# Menyembunyikan folder virtual environment (jika ada)
+venv/
+env/
+
